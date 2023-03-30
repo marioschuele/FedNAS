@@ -51,6 +51,46 @@ def accuracy(output, target, topk=(1,)):
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
+def binary_accuracy(output, target):
+    batch_size = target.size(0)
+
+    _, pred = output.max(1)
+    correct = pred.eq(target)
+
+    acc = correct.sum().float() / batch_size * 100.0
+    return acc
+
+
+def f1_score(output, target):
+    precision_score = precision(output, target)
+    recall_score = recall(output, target)
+
+    f1 = 2 * (precision_score * recall_score) / (precision_score + recall_score + 1e-20)
+    return f1
+
+def precision(output, target):
+    batch_size = target.size(0)
+
+    _, pred = output.max(1)
+    correct = pred.eq(target)
+
+    tp = correct.sum().float()
+    correct = correct.float()
+    fp = (1 - correct).sum().float()
+
+    precision = tp.mul_(100.0 / (tp + fp))
+    return precision
+
+def recall(output, target):
+    _, pred = output.topk(1, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+    correct = correct.float()
+    correct_k = correct.view(-1).float().sum(0)
+    relevant_k = target.ne(0).float().sum(0)
+    recall_1 = correct_k.mul_(100.0 / relevant_k)
+    return recall_1
+
 
 class Cutout(object):
     def __init__(self, length):

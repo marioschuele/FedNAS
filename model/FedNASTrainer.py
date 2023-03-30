@@ -54,10 +54,9 @@ class FedNASTrainer(object):
         weight_params = filter(lambda p: id(p) not in arch_params,
                                parameters)
 
-        optimizer = torch.optim.SGD(
+        optimizer = torch.optim.Adam(
             weight_params,  # model.parameters(),
             self.args.learning_rate,
-            momentum=self.args.momentum,
             weight_decay=self.args.weight_decay)
 
         architect = Architect(self.model, self.criterion, self.args, self.device)
@@ -66,14 +65,16 @@ class FedNASTrainer(object):
 
         local_avg_train_acc = []
         local_avg_train_loss = []
+        local_avg_train_recall = []
         for epoch in range(self.args.epochs):
             # training
-            train_acc, train_obj, train_loss = self.local_search(self.train_local, self.test_local,
+            train_acc, train_obj, train_loss, train_recall, train_precision, train_f1score = self.local_search(self.train_local, self.test_local,
                                                                  self.model, architect, self.criterion,
                                                                  optimizer)
-            logging.info('client_idx = %d, epoch = %d, local search_acc %f' % (self.client_index, epoch, train_acc))
+            logging.info('client_idx = %d, epoch = %d, local search_acc %f, local search_recall %f' % (self.client_index, epoch, train_acc, train_recall))
             local_avg_train_acc.append(train_acc)
             local_avg_train_loss.append(train_loss)
+            local_avg_train_recall.append(train_recall)
 
             # # validation
             # with torch.no_grad():
@@ -96,6 +97,9 @@ class FedNASTrainer(object):
         top1 = utils.AvgrageMeter()
         top5 = utils.AvgrageMeter()
         loss = None
+        rec = utils.AvgrageMeter()
+        pre = utils.AvgrageMeter()
+        f1 = utils.AvgrageMeter()
         for step, (input, target) in enumerate(train_queue):
 
             # logging.info("epoch %d, step %d START" % (epoch, step))
@@ -125,18 +129,27 @@ class FedNASTrainer(object):
             optimizer.step()
 
             # logging.info("step %d. update weight by SGD. FINISH\n" % step)
+
+            recall = utils.recall(logits, target)
+            precision = utils.precision(logits, target)
+            f1score = utils.f1_score(logits, target)
+
             prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
             objs.update(loss.item(), n)
             top1.update(prec1.item(), n)
             top5.update(prec5.item(), n)
 
+            rec.update(recall.item(), n)
+            pre.update(precision.item(), n)
+            f1.update(f1score.item(), n)
+
             # torch.cuda.empty_cache()
 
             if step % self.args.report_freq == 0:
-                logging.info('client_index = %d, search %03d %e %f %f', self.client_index,
-                             step, objs.avg, top1.avg, top5.avg)
+                logging.info('client_index = %d, search %03d %e %f Recall: %f', self.client_index,
+                             step, objs.avg, top1.avg, top5.avg, rec.avg)
 
-        return top1.avg / 100.0, objs.avg / 100.0, loss
+        return top1.avg / 100.0, objs.avg / 100.0, loss, rec.avg / 100.0, pre.avg / 100.0, f1.avg / 100.0
 
     def train(self):
         self.model.to(self.device)
@@ -144,10 +157,9 @@ class FedNASTrainer(object):
 
         parameters = self.model.parameters()
 
-        optimizer = torch.optim.SGD(
+        optimizer = torch.optim.Adam(
             parameters,  # model.parameters(),
             self.args.learning_rate,
-            momentum=self.args.momentum,
             weight_decay=self.args.weight_decay)
 
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
@@ -155,14 +167,16 @@ class FedNASTrainer(object):
 
         local_avg_train_acc = []
         local_avg_train_loss = []
+        local_avg_train_recall = []
         for epoch in range(self.args.epochs):
             # training
-            train_acc, train_obj, train_loss = self.local_train(self.train_local, self.test_local,
+            train_acc, train_obj, train_loss, train_recall, train_precision, train_f1score = self.local_train(self.train_local, self.test_local,
                                                                 self.model, self.criterion,
                                                                 optimizer)
-            logging.info('client_idx = %d, local train_acc %f' % (self.client_index, train_acc))
+            logging.info('client_idx = %d, local train_acc %f, local train_recall %f' % (self.client_index, train_acc, train_recall))
             local_avg_train_acc.append(train_acc)
             local_avg_train_loss.append(train_loss)
+            local_avg_train_recall.append(train_recall)
 
             scheduler.step()
             lr = scheduler.get_lr()[0]
@@ -178,6 +192,10 @@ class FedNASTrainer(object):
         objs = utils.AvgrageMeter()
         top1 = utils.AvgrageMeter()
         top5 = utils.AvgrageMeter()
+
+        rec = utils.AvgrageMeter()
+        pre = utils.AvgrageMeter()
+        f1 = utils.AvgrageMeter()
 
         for step, (input, target) in enumerate(train_queue):
             # logging.info("epoch %d, step %d START" % (epoch, step))
@@ -199,21 +217,34 @@ class FedNASTrainer(object):
             optimizer.step()
             # logging.info("step %d. update weight by SGD. FINISH\n" % step)
 
+            recall = utils.recall(logits, target)
+            precision = utils.precision(logits, target)
+            f1score = utils.f1_score(logits, target)
+
             prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
             objs.update(loss.item(), n)
             top1.update(prec1.item(), n)
             top5.update(prec5.item(), n)
 
+            rec.update(recall.item(), n)
+            pre.update(precision.item(), n)
+            f1.update(f1score.item(), n)
+
             # torch.cuda.empty_cache()
             if step % self.args.report_freq == 0:
-                logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+                logging.info('train %03d %e %f %f Recall: %f', step, objs.avg, top1.avg, top5.avg, rec.avg)
 
-        return top1.avg, objs.avg, loss
+        return top1.avg, objs.avg, loss, rec.avg, pre.avg, f1.avg
 
     def local_infer(self, valid_queue, model, criterion):
         objs = utils.AvgrageMeter()
         top1 = utils.AvgrageMeter()
         top5 = utils.AvgrageMeter()
+
+        rec = utils.AvgrageMeter()
+        pre = utils.AvgrageMeter()
+        f1 = utils.AvgrageMeter()
+
         model.eval()
         loss = None
         for step, (input, target) in enumerate(valid_queue):
@@ -223,17 +254,25 @@ class FedNASTrainer(object):
             logits = model(input)
             loss = criterion(logits, target)
 
+            recall = utils.recall(logits, target)
+            precision = utils.precision(logits, target)
+            f1score = utils.f1_score(logits, target)
+
             prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
             n = input.size(0)
             objs.update(loss.item(), n)
             top1.update(prec1.item(), n)
             top5.update(prec5.item(), n)
 
-            if step % self.args.report_freq == 0:
-                logging.info('client_index = %d, valid %03d %e %f %f', self.client_index,
-                             step, objs.avg, top1.avg, top5.avg)
+            rec.update(recall.item(), n)
+            pre.update(precision.item(), n)
+            f1.update(f1score.item(), n)
 
-        return top1.avg / 100.0, objs.avg / 100.0, loss
+            if step % self.args.report_freq == 0:
+                logging.info('client_index = %d, valid %03d %e %f %f Recall: %f', self.client_index,
+                             step, objs.avg, top1.avg, top5.avg, rec.avg)
+
+        return top1.avg / 100.0, objs.avg / 100.0, loss, rec.avg / 100.0, pre.avg / 100.0, f1.avg / 100.0
 
     # after searching, infer() function is used to infer the searched architecture
     def infer(self):

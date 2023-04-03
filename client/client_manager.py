@@ -66,9 +66,9 @@ class ClientMananger(Observer):
         logging.info("#######training########### round_id = %d" % self.round_idx)
         start_time = time.time()
         if self.args.stage == "search":
-            weights, alphas, local_sample_num, train_acc, train_loss = self.trainer.search()
+            weights, alphas, local_sample_num, train_acc, train_loss, train_rec = self.trainer.search()
         else:
-            weights, local_sample_num, train_acc, train_loss = self.trainer.train()
+            weights, local_sample_num, train_acc, train_loss, train_rec = self.trainer.train()
             alphas = []
         train_finished_time = time.time()
         # for one epoch, the local searching time cost is: 75s (based on RTX2080Ti)

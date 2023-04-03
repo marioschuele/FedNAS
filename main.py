@@ -40,12 +40,12 @@ def add_args(parser):
     parser.add_argument('--partition', type=str, default='hetero', metavar='N',
                         help='how to partition the dataset on local workers')
 
-    parser.add_argument('--batch_size', type=int, default=16, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                         help='input batch size for training (default: 64)')
 
     parser.add_argument('--wd', help='weight decay parameter;', type=float, default=0.003)
 
-    parser.add_argument('--epochs', type=int, default=1, metavar='EP',
+    parser.add_argument('--epochs', type=int, default=5, metavar='EP',
                         help='how many epochs will be trained locally')
 
     parser.add_argument('--local_points', type=int, default=5000, metavar='LP',
@@ -57,8 +57,8 @@ def add_args(parser):
     parser.add_argument('--comm_round', type=int, default=30,
                         help='how many round of communications we should use')
 
-    parser.add_argument('--init_channels', type=int, default=16, help='num of init channels')
-    parser.add_argument('--layers', type=int, default=8, help='DARTS layers')
+    parser.add_argument('--init_channels', type=int, default=6, help='num of init channels')
+    parser.add_argument('--layers', type=int, default=7, help='DARTS layers')
 
     parser.add_argument('--learning_rate', type=float, default=0.025, help='init learning rate')
     parser.add_argument('--learning_rate_min', type=float, default=0.001, help='min learning rate')

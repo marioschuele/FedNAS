@@ -17,8 +17,10 @@ class MPIMessage(object):
     MSG_ARG_KEY_ARCH_PARAMS = "arch_params"
     MSG_ARG_KEY_LOCAL_TRAINING_ACC = "local_training_acc"
     MSG_ARG_KEY_LOCAL_TRAINING_LOSS = "local_training_loss"
+    MSG_ARG_KEY_LOCAL_TRAINING_RECALL = "local_training_recall"
     MSG_ARG_KEY_LOCAL_TEST_ACC = "local_test_acc"
     MSG_ARG_KEY_LOCAL_TEST_LOSS = "local_test_loss"
+    MSG_ARG_KEY_LOCAL_TEST_RECALL = "local_test_recall"
 
     MSG_OPERATION_SEND = "send"
     MSG_OPERATION_RECEIVE = "receive"

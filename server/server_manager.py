@@ -77,9 +77,10 @@ class ServerMananger(Observer):
         local_sample_number = msg_params.get(MPIMessage.MSG_ARG_KEY_NUM_SAMPLES)
         train_acc = msg_params.get(MPIMessage.MSG_ARG_KEY_LOCAL_TRAINING_ACC)
         train_loss = msg_params.get(MPIMessage.MSG_ARG_KEY_LOCAL_TRAINING_LOSS)
+        train_recall = msg_params.get(MPIMessage.MSG_ARG_KEY_LOCAL_TRAINING_RECALL)
 
         self.aggregator.add_local_trained_result(process_id - 1, model_params, arch_params, local_sample_number,
-                                                 train_acc, train_loss)
+                                                 train_acc, train_loss, train_recall)
         b_all_received = self.aggregator.check_whether_all_receive()
         logging.info("b_all_received = " + str(b_all_received))
         if b_all_received:

@@ -59,6 +59,28 @@ class Cell(nn.Module):
             states += [s]
         return torch.cat([states[i] for i in self._concat], dim=1)
 
+class AuxiliaryHeadSIDD(nn.Module):
+
+    def __init__(self, C, num_classes):
+        super(AuxiliaryHeadSIDD, self).__init__()
+        self.features = nn.Sequential(
+            nn.ReLU(inplace=True),
+            nn.AvgPool2d(5, stride=3, padding=0, count_include_pad=False),  # output size = 15x15
+            nn.Conv2d(C, 128, 3, bias=False, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 768, 3, bias=False, padding=1),
+            nn.BatchNorm2d(768),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d((1, 1))  # output size = 1x1
+        )
+        self.classifier = nn.Linear(768, num_classes)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.classifier(x.view(x.size(0), -1))
+        return x
+
 
 class AuxiliaryHeadCIFAR(nn.Module):
 
@@ -106,6 +128,61 @@ class AuxiliaryHeadImageNet(nn.Module):
         x = self.features(x)
         x = self.classifier(x.view(x.size(0), -1))
         return x
+
+class NetworkSIDD(nn.Module):
+    def __init__(self, C, num_classes, layers, auxiliary, genotype):
+        super(NetworkSIDD, self).__init__()
+        self._layers = layers
+        self._auxiliary = auxiliary
+        self.drop_path_prob = 0.5
+
+        stem_multiplier = 3
+        C_curr = stem_multiplier * C
+
+        self.stem = nn.Sequential(
+            nn.Conv2d(1, C_curr, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(C_curr),
+            nn.ReLU(inplace=True)
+        )
+
+        C_prev_prev, C_prev, C_curr = C_curr, C_curr, C
+
+        self.cells = nn.ModuleList()
+        reduction_prev = False
+
+        for i in range(layers):
+            if i in [layers // 3, 2 * layers // 3]:
+                C_curr *= 2
+                reduction = True
+            else:
+                reduction = False
+
+            cell = Cell(genotype, C_prev_prev, C_prev, C_curr, reduction, reduction_prev)
+            reduction_prev = reduction
+            self.cells += [cell]
+            C_prev_prev, C_prev = C_prev, cell.multiplier * C_curr
+
+            if i == 2 * layers // 3:
+                C_to_auxiliary = C_prev
+
+        if auxiliary:
+            self.auxiliary_head = AuxiliaryHeadCIFAR(C_to_auxiliary, num_classes)
+
+        self.global_pooling = nn.AdaptiveAvgPool2d(1)
+        self.classifier = nn.Linear(C_prev, num_classes)
+
+    def forward(self, input):
+        logits_aux = None
+        s0 = s1 = self.stem(input)
+        for i, cell in enumerate(self.cells):
+            s0, s1 = s1, cell(s0, s1, self.drop_path_prob)
+            if i == 2 * self._layers // 3:
+                if self._auxiliary and self.training:
+                    logits_aux = self.auxiliary_head(s1)
+        out = self.global_pooling(s1)
+        logits = self.classifier(out.view(out.size(0), -1))
+        return logits, logits_aux
+
 
 
 class NetworkCIFAR(nn.Module):

@@ -9,6 +9,8 @@ from darts.architect import Architect
 from darts.model import NetworkCIFAR
 from darts.model_search import Network
 
+from torchmetrics.classification import BinaryRecall, MulticlassRecall, MulticlassPrecision
+
 
 class FedNASTrainer(object):
 
@@ -26,7 +28,7 @@ class FedNASTrainer(object):
 
     def init_model(self):
         if self.args.stage == "search":
-            model = Network(self.args.init_channels, 10, self.args.layers, self.criterion, self.device)
+            model = Network(self.args.init_channels, 2, self.args.layers, self.criterion, self.device)
         else:
             genotype = genotypes.FedNAS_V1
             logging.info(genotype)
@@ -90,7 +92,8 @@ class FedNASTrainer(object):
 
         return weights, alphas, self.local_sample_number, \
                sum(local_avg_train_acc) / len(local_avg_train_acc), \
-               sum(local_avg_train_loss) / len(local_avg_train_loss)
+               sum(local_avg_train_loss) / len(local_avg_train_loss), \
+               sum(local_avg_train_recall) / len(local_avg_train_recall)
 
     def local_search(self, train_queue, valid_queue, model, architect, criterion, optimizer):
         objs = utils.AvgrageMeter()
@@ -130,9 +133,13 @@ class FedNASTrainer(object):
 
             # logging.info("step %d. update weight by SGD. FINISH\n" % step)
 
-            recall = utils.recall(logits, target)
-            precision = utils.precision(logits, target)
-            f1score = utils.f1_score(logits, target)
+            recall_met = MulticlassRecall(num_classes = 2)
+            recall_met.cuda()
+            recall = recall_met(logits, target)
+            precision_met = MulticlassPrecision(num_classes = 2)
+            precision_met.cuda()
+            precision = precision_met(logits, target)
+            f1_score = 2 * precision * recall / (precision + recall + 0.000001)
 
             prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
             objs.update(loss.item(), n)
@@ -141,7 +148,7 @@ class FedNASTrainer(object):
 
             rec.update(recall.item(), n)
             pre.update(precision.item(), n)
-            f1.update(f1score.item(), n)
+            f1.update(f1_score.item(), n)
 
             # torch.cuda.empty_cache()
 
@@ -186,7 +193,8 @@ class FedNASTrainer(object):
 
         return weights, self.local_sample_number, \
                sum(local_avg_train_acc) / len(local_avg_train_acc), \
-               sum(local_avg_train_loss) / len(local_avg_train_loss)
+               sum(local_avg_train_loss) / len(local_avg_train_loss), \
+               sum(local_avg_train_recall) / len(local_avg_train_recall)
 
     def local_train(self, train_queue, valid_queue, model, criterion, optimizer):
         objs = utils.AvgrageMeter()
@@ -217,9 +225,13 @@ class FedNASTrainer(object):
             optimizer.step()
             # logging.info("step %d. update weight by SGD. FINISH\n" % step)
 
-            recall = utils.recall(logits, target)
-            precision = utils.precision(logits, target)
-            f1score = utils.f1_score(logits, target)
+            recall_met = MulticlassRecall(num_classes = 2)
+            recall_met.cuda()
+            recall = recall_met(logits, target)
+            precision_met = MulticlassPrecision(num_classes = 2)
+            precision_met.cuda()
+            precision = precision_met(logits, target)
+            f1_score = 2 * precision * recall / (precision + recall + 0.000001)
 
             prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
             objs.update(loss.item(), n)
@@ -228,13 +240,13 @@ class FedNASTrainer(object):
 
             rec.update(recall.item(), n)
             pre.update(precision.item(), n)
-            f1.update(f1score.item(), n)
+            f1.update(f1_score.item(), n)
 
             # torch.cuda.empty_cache()
             if step % self.args.report_freq == 0:
                 logging.info('train %03d %e %f %f Recall: %f', step, objs.avg, top1.avg, top5.avg, rec.avg)
 
-        return top1.avg, objs.avg, loss, rec.avg, pre.avg, f1.avg
+        return top1.avg, objs.avg, loss, pre.avg, f1.avg, rec.avg
 
     def local_infer(self, valid_queue, model, criterion):
         objs = utils.AvgrageMeter()
@@ -254,9 +266,13 @@ class FedNASTrainer(object):
             logits = model(input)
             loss = criterion(logits, target)
 
-            recall = utils.recall(logits, target)
-            precision = utils.precision(logits, target)
-            f1score = utils.f1_score(logits, target)
+            recall_met = MulticlassRecall(num_classes = 2)
+            recall_met.cuda()
+            recall = recall_met(logits, target)
+            precision_met = MulticlassPrecision(num_classes = 2)
+            precision_met.cuda()
+            precision = precision_met(logits, target)
+            f1_score = 2 * precision * recall / (precision + recall + 0.000001)
 
             prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
             n = input.size(0)
@@ -266,7 +282,7 @@ class FedNASTrainer(object):
 
             rec.update(recall.item(), n)
             pre.update(precision.item(), n)
-            f1.update(f1score.item(), n)
+            f1.update(f1_score.item(), n)
 
             if step % self.args.report_freq == 0:
                 logging.info('client_index = %d, valid %03d %e %f %f Recall: %f', self.client_index,
@@ -281,8 +297,11 @@ class FedNASTrainer(object):
 
         test_correct = 0.0
         test_loss = 0.0
+        test_recall = 0.0
         test_sample_number = 0.0
         test_data = self.train_local
+        recall_met = MulticlassRecall(num_classes=2).to(self.device)
+        batch_idx = 0
         with torch.no_grad():
             for batch_idx, (x, target) in enumerate(test_data):
                 x = x.to(self.device)
@@ -293,8 +312,12 @@ class FedNASTrainer(object):
                 _, predicted = torch.max(pred, 1)
                 correct = predicted.eq(target).sum()
 
+                test_recall += recall_met(pred, target)
+
                 test_correct += correct.item()
                 test_loss += loss.item() * target.size(0)
                 test_sample_number += target.size(0)
+                batch_idx = batch_idx
+            test_recall /= (batch_idx + 1)
             logging.info("client_idx = %d, local_train_loss = %s" % (self.client_index, test_loss))
-        return test_correct / test_sample_number, test_loss
+        return test_correct / test_sample_number, test_loss, test_recall

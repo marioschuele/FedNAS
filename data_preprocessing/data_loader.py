@@ -19,6 +19,7 @@ logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+yshape = 0
 
 def load_mnist_data(datadir):
     transform = transforms.Compose([transforms.ToTensor()])
@@ -178,6 +179,7 @@ def partition_data(dataset, datadir, logdir, partition, n_nets, alpha, args):
     elif dataset == 'sidd':
         X_train, y_train, X_test, y_test = load_SIDD_data()
         n_train = X_train.shape[0]
+        yshape = y_train
 
     if partition == "homo":
         # total_num = int(n_train / 200)
@@ -189,6 +191,7 @@ def partition_data(dataset, datadir, logdir, partition, n_nets, alpha, args):
     elif partition == "hetero":
         min_size = 0
         K = 2
+        X_train, y_train, X_test, y_test = load_SIDD_data()
         N = y_train.shape[0]
         net_dataidx_map = {}
 

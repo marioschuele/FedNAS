@@ -6,12 +6,13 @@ ROUND=$4
 EPOCH=$5
 BATCH_SIZE=$6
 
-mpirun -np 16 -hostfile ./mpi_host_file python3 ./Studium/Master/Masterarbeit/FedNAS Implementierung/FedNAS/main.py \
-  --gpu $GPU \
-  --model $MODEL \
-  --dataset SIDD \
-  --partition $DISTRIBUTION  \
+
+OMPI_ALLOW_RUN_AS_ROOT=1 OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 mpirun --allow-run-as-root -np 1 -hostfile ./mpi_host_file python3 ./main.py \
+  --gpu 1 \
+  --model darts \
+  --dataset sidd \
+  --partition hetero  \
   --client_number 15 \
-  --comm_round $ROUND \
-  --epochs $EPOCH \
-  --batch_size $BATCH_SIZE \
+  --comm_round 30 \
+  --epochs 3 \
+  --batch_size 32 \

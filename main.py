@@ -28,7 +28,7 @@ def add_args(parser):
     return a parser added with args required by fit
     """
     # Training settings
-    parser.add_argument('--gpu', type=int, default=0, help='gpu')
+    parser.add_argument('--gpu', type=int, default=1, help='gpu')
     parser.add_argument('--stage', type=str, default='search',
                         help='stage: search; train')
     parser.add_argument('--model', type=str, default='resnet', metavar='N',
@@ -45,7 +45,7 @@ def add_args(parser):
 
     parser.add_argument('--wd', help='weight decay parameter;', type=float, default=0.003)
 
-    parser.add_argument('--epochs', type=int, default=5, metavar='EP',
+    parser.add_argument('--epochs', type=int, default=3, metavar='EP',
                         help='how many epochs will be trained locally')
 
     parser.add_argument('--local_points', type=int, default=5000, metavar='LP',

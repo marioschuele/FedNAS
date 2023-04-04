@@ -96,30 +96,10 @@ class MNIST_truncated(data.Dataset):
         return len(self.data)
 
 def load_data():
-      directory = 'SIDD'
+      directory = '/content/SIDD'
       uid = 0
       imgs = {}
-      """
-      for client in os.listdir(directory):
-        curr_path = f'{directory}/{client}/pcap'
-        logging.info("Client structure identified")
-        for subdir in os.listdir(curr_path):
-          curr_path = f'{directory}/{client}/pcap/{subdir}/dataset'
-          curr_type = subdir[-1:]
-   
-          for dayscen in os.listdir(curr_path):
-            curr_path = f'{directory}/{client}/pcap/{subdir}/dataset/{dayscen}'
-            logging.info("Iterate days: %s", dayscen)
-            for img in os.listdir(curr_path):
-              #logging.info("Add images to df")
-              if dayscen == 'benign':
-                imgs[uid] = {'id': uid, 'label': str(0), 'fn': img, 'path': curr_path + '/' + img}
-              elif dayscen == 'malicious':
-                imgs[uid] = {'id': uid, 'label': str(curr_type), 'fn': img, 'path': curr_path + '/' + img}
-          uid +=1
-    
-      """
-      #For testing purposes
+
       for client in os.listdir(directory):
 
         curr_path = f'{directory}/{client}/pcap'
@@ -133,7 +113,7 @@ def load_data():
               curr_path = f'{directory}/{client}/pcap/{subdir}/dataset/{dayscen}'
 
               for i, img in enumerate(os.listdir(curr_path)):
-                if i == 70:
+                if i == 10:
                   break
                 if dayscen == 'benign':
                   imgs[uid] = {'id': uid, 'label': str(0), 'fn': img, 'path': curr_path + '/' + img}

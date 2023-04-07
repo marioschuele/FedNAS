@@ -206,6 +206,7 @@ class FedNASAggregator(object):
             self.test_recall_avg = test_recall / (batch_idx +1)
             self.test_acc_avg = test_correct / test_sample_number
             self.test_loss_avg = test_loss / test_sample_number
+            logging.info("server test. round_idx = %d, test_loss = %s, test_recall = %s" % (round_idx, self.test_loss_avg, self.test_recall_avg))
 
             end_time = time.time()
             logging.info("server_infer time cost: %d" % (end_time - start_time))

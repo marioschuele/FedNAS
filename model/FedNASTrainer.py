@@ -72,7 +72,7 @@ class FedNASTrainer(object):
             # training
             train_acc, train_obj, train_loss, train_recall, train_precision, train_f1score = self.local_search(self.train_local, self.test_local,
                                                                  self.model, architect, self.criterion,
-                                                                 optimizer, client_index)
+                                                                 optimizer)
             logging.info('client_idx = %d, epoch = %d, local search_acc %f, local search_recall %f' % (self.client_index, epoch, train_acc, train_recall))
             local_avg_train_acc.append(train_acc)
             local_avg_train_loss.append(train_loss)
@@ -95,7 +95,7 @@ class FedNASTrainer(object):
                sum(local_avg_train_loss) / len(local_avg_train_loss), \
                sum(local_avg_train_recall) / len(local_avg_train_recall)
 
-    def local_search(self, train_queue, valid_queue, model, architect, criterion, optimizer, client_index):
+    def local_search(self, train_queue, valid_queue, model, architect, criterion, optimizer):
         objs = utils.AvgrageMeter()
         top1 = utils.AvgrageMeter()
         top5 = utils.AvgrageMeter()
@@ -156,7 +156,7 @@ class FedNASTrainer(object):
                 logging.info('client_index = %d, search %03d %e %f Recall: %f', self.client_index,
                              step, objs.avg, top1.avg, rec.avg)
 
-        return top1.avg / 100.0, objs.avg / 100.0, loss, rec.avg / 100.0, pre.avg / 100.0, f1.avg / 100.0
+        return top1.avg / 100.0, objs.avg / 100.0, loss, rec.avg, pre.avg, f1.avg
 
     def train(self):
         self.model.to(self.device)
@@ -288,7 +288,7 @@ class FedNASTrainer(object):
                 logging.info('client_index = %d, valid %03d %e %f %f Recall: %f', self.client_index,
                              step, objs.avg, top1.avg, top5.avg, rec.avg)
 
-        return top1.avg / 100.0, objs.avg / 100.0, loss, rec.avg / 100.0, pre.avg / 100.0, f1.avg / 100.0
+        return top1.avg / 100.0, objs.avg / 100.0, loss, rec.avg, pre.avg, f1.avg
 
     # after searching, infer() function is used to infer the searched architecture
     def infer(self):

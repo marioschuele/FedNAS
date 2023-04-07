@@ -134,14 +134,16 @@ def load_data():
       for client in os.listdir(directory):
           curr_path = f'{directory}/{client}/pcap'
 
-          for subdir in os.listdir(curr_path):
+          for j, subdir in enumerate(os.listdir(curr_path)):
+              if j == 3:
+                break
               curr_path = f'{directory}/{client}/pcap/{subdir}/dataset'
               curr_type = subdir[-1:]
               if curr_type == str(1):
                   for dayscen in os.listdir(curr_path):
                       curr_path = f'{directory}/{client}/pcap/{subdir}/dataset/{dayscen}'
                       for i, img in enumerate(os.listdir(curr_path)):
-                          if i == 45:
+                          if i == 1:
                             break
                           if dayscen == 'benign':
                               label = 0
@@ -152,7 +154,7 @@ def load_data():
                           label_counts[label] += 1
                           
       print(label_counts)
-      print(label_counts[1] / label_counts[0] * 100)
+      #print(label_counts[1] / label_counts[0] * 100)
 
       total = label_counts[1] + label_counts[0]
       neg = label_counts[0]
@@ -164,8 +166,8 @@ def load_data():
 
       class_weight = {0: weight_for_0, 1: weight_for_1}
 
-      print('Weight for class 0: {:.2f}'.format(weight_for_0))
-      print('Weight for class 1: {:.2f}'.format(weight_for_1))
+      #print('Weight for class 0: {:.2f}'.format(weight_for_0))
+      #print('Weight for class 1: {:.2f}'.format(weight_for_1))
       img_df = pd.DataFrame.from_dict(imgs,orient='index')
       #img_df = img_df[img_df['client_id'] == clientID]
       img_df['label'] = img_df['label'].astype(int)
@@ -188,13 +190,8 @@ def _parse_function(filename, label):
 class SIDD(data.Dataset):
     #def __init__(self, root, dataidxs=None):
     def __init__(self, dataidxs=None):
-        #self.client_id = client_id
-        #self.root = root
+
         self.dataidxs = dataidxs
-        #self.train = train
-        #self.transform = transform
-        #self.target_transform = target_transform
-        #self.download = download
 
         img_df = load_data()
         file_paths = img_df.path
@@ -215,6 +212,43 @@ class SIDD(data.Dataset):
     def __len__(self):
         return self.ds_length
 
+class SIDD_truncated(data.Dataset):
+    #def __init__(self, root, dataidxs=None):
+    def __init__(self, dataidxs=None):
+        #self.client_id = client_id
+        #self.root = root
+        self.dataidxs = dataidxs
+        #self.train = train
+        #self.transform = transform
+        #self.target_transform = target_transform
+        #self.download = download
+        self.data, self.target = self.__build_truncated_dataset__()
+
+    def __build_truncated_dataset__(self):
+
+        sidd = SIDD()
+
+        data = sidd.file_paths
+        target = sidd.file_labels
+        
+        if self.dataidxs is not None:
+            logging.info("*******dataidxs: %s ************", self.dataidxs)
+            data = data[self.dataidxs]
+            target = target[self.dataidxs]
+
+        return data, target
+
+    def __getitem__(self, idx):
+        logging.info("#########   Data: %s ##### Index: %s", self.data, idx)
+        logging.info("dataaaaa:  %s", self.data[idx])
+        filename = self.data[idx]
+        label = self.target[idx]
+        image, label = _parse_function(filename, label)
+        return image, label
+
+
+    def __len__(self):
+        return len(self.data)
 
 class CIFAR10_truncated(data.Dataset):
 

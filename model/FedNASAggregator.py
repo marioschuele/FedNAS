@@ -9,8 +9,7 @@ from darts.model import NetworkCIFAR
 from darts.model_search import Network
 from torch import nn
 from torchsummaryX import summary
-#from torchmetrics import MulticlassRecall
-
+from torchmetrics.classification import BinaryRecall, MulticlassRecall
 
 class FedNASAggregator(object):
     def __init__(self, train_global, test_global, all_train_data_num, client_num, device, args):
@@ -42,7 +41,7 @@ class FedNASAggregator(object):
         self.wandb_table = wandb.Table(columns=["Epoch", "Searched Architecture"])
 
     def init_model(self):
-        criterion = nn.BCELoss().to(self.device)
+        criterion = nn.CrossEntropyLoss().to(self.device)
         if self.args.stage == "search":
             model = Network(self.args.init_channels, 2, self.args.layers, criterion, self.device)
         else:
@@ -178,9 +177,9 @@ class FedNASAggregator(object):
             test_sample_number = 0.0
             test_data = self.test_global
 
-            #recall_metric = MulticlassRecall(num_classes=2).to(self.device)
+            recall_metric = MulticlassRecall(num_classes = 2).to(self.device)
             # loss
-            criterion = nn.BCELoss().to(self.device)
+            criterion = nn.CrossEntropyLoss().to(self.device)
             batch_idx = 0
             with torch.no_grad():
                 for batch_idx, (x, target) in enumerate(test_data):
@@ -200,7 +199,7 @@ class FedNASAggregator(object):
                     test_loss += loss.item() * target.size(0)
                     test_sample_number += target.size(0)
 
-                    #test_recall += recall_metric(pred, target)
+                    test_recall += recall_metric(pred, target)
                     
                     batch_idx = batch_idx
                 logging.info("server test. round_idx = %d, test_loss = %s, test_recall = %s" % (round_idx, test_loss, test_recall))

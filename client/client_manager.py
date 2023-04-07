@@ -83,7 +83,7 @@ class ClientMananger(Observer):
         In our case, the model size of ResNet is around 229.62M. Thus, we will optimize the communication speed using
         CUDA-aware MPI.
         """
-        self.__send_msg_fedavg_send_model_to_server(weights, alphas, local_sample_num, train_acc, train_loss)
+        self.__send_msg_fedavg_send_model_to_server(weights, alphas, local_sample_num, train_acc, train_loss, train_rec)
         communication_finished_time = time.time()
         # for one epoch, the local communication time cost is: < 1s (based o n RTX2080Ti)
         logging.info("local communication time cost: %d" % (communication_finished_time - train_finished_time))
@@ -104,7 +104,7 @@ class ClientMananger(Observer):
         Compared to the centralized training which cost around (75*16 + 15)*100 / 3600 = 33.7 hours
         """
 
-    def __send_msg_fedavg_send_model_to_server(self, weights, alphas, local_sample_num, valid_acc, valid_loss):
+    def __send_msg_fedavg_send_model_to_server(self, weights, alphas, local_sample_num, valid_acc, valid_loss, valid_recall):
         msg = MPIMessage()
         msg.add(MPIMessage.MSG_ARG_KEY_OPERATION, MPIMessage.MSG_OPERATION_SEND)
         msg.add(MPIMessage.MSG_ARG_KEY_TYPE, MPIMessage.MSG_TYPE_C2S_SEND_MODEL_TO_SERVER)
@@ -115,6 +115,7 @@ class ClientMananger(Observer):
         msg.add(MPIMessage.MSG_ARG_KEY_ARCH_PARAMS, alphas)
         msg.add(MPIMessage.MSG_ARG_KEY_LOCAL_TRAINING_ACC, valid_acc)
         msg.add(MPIMessage.MSG_ARG_KEY_LOCAL_TRAINING_LOSS, valid_loss)
+        msg.add(MPIMessage.MSG_ARG_KEY_LOCAL_TRAINING_RECALL, valid_recall)
         self.com_manager.send_message(msg)
 
     def __finish(self):

@@ -13,7 +13,7 @@ from torch.autograd import Variable
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from data_preprocessing.datasets import MNIST_truncated, SIDD, CIFAR10_truncated, ImageFolderTruncated 
+from data_preprocessing.datasets import MNIST_truncated, SIDD, CIFAR10_truncated, ImageFolderTruncated, SIDD_truncated 
 
 logging.basicConfig()
 logger = logging.getLogger()
@@ -39,11 +39,11 @@ def load_mnist_data(datadir):
 
 def load_SIDD_data():
     #client_id = client_id
-    sidd_ds = SIDD()
-
+    sidd_ds = SIDD_truncated()
+    """
     train_size = int(0.8 * len(sidd_ds))
     test_size = len(sidd_ds) - train_size
-    """
+    
     test_size = int(0.1 * len(sidd_ds))
     val_size = len(sidd_ds) - train_size - test_size
     """
@@ -53,10 +53,10 @@ def load_SIDD_data():
     #sidd_train = sidd_ds.take(train_size)
     #sidd_test = sidd_ds.skip(train_size)
 
-    X_train = sidd_ds.file_paths
-    y_train = sidd_ds.file_labels
-    X_test = sidd_ds.file_paths
-    y_test = sidd_ds.file_labels
+    X_train = sidd_ds.data
+    y_train = sidd_ds.target
+    X_test = sidd_ds.data
+    y_test = sidd_ds.target
 
     #X_train, y_train, X_test, y_test = train_test_split(sidd_ds.file_paths, sidd_ds.file_labels, test_size=0.2, train_size=0.8, random_state=4)
 
@@ -307,15 +307,15 @@ def get_dataloader(dataset, datadir, train_bs, test_bs, dataidxs=None):
       test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False, drop_last=True)
       """
 
-      sidd_ds = SIDD()
+      sidd_ds = SIDD_truncated(dataidxs)
 
-      train_size = int(0.8 * len(sidd_ds))
-      test_size = len(sidd_ds) - train_size
+      #train_size = int(0.8 * len(sidd_ds))
+      #test_size = len(sidd_ds) - train_size
 
-      sidd_train, sidd_test = random_split(sidd_ds, [train_size, test_size])
+      #sidd_train, sidd_test = random_split(sidd_ds, [train_size, test_size])
 
-      train_dl = data.DataLoader(dataset=sidd_train, batch_size=train_bs, shuffle=True, drop_last=True)
-      test_dl = data.DataLoader(dataset=sidd_test, batch_size=test_bs, shuffle=False, drop_last=True)
+      train_dl = data.DataLoader(dataset=sidd_ds, batch_size=train_bs, shuffle=True, drop_last=True)
+      test_dl = data.DataLoader(dataset=sidd_ds, batch_size=test_bs, shuffle=False, drop_last=True)
 
     elif dataset == 'cinic10':
         # statistic for normalizing the dataset

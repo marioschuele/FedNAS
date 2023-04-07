@@ -196,7 +196,7 @@ class FedNASAggregator(object):
                     correct = predicted.eq(target).sum()
 
                     test_correct += correct.item()
-                    test_loss += loss.item() * target.size(0)
+                    test_loss += loss.item()
                     test_sample_number += target.size(0)
 
                     test_recall += recall_metric(pred, target)
@@ -205,7 +205,7 @@ class FedNASAggregator(object):
                 logging.info("server test. round_idx = %d, test_loss = %s, test_recall = %s" % (round_idx, test_loss, test_recall))
             self.test_recall_avg = test_recall / (batch_idx +1)
             self.test_acc_avg = test_correct / test_sample_number
-            self.test_loss_avg = test_loss
+            self.test_loss_avg = test_loss / test_sample_number
 
             end_time = time.time()
             logging.info("server_infer time cost: %d" % (end_time - start_time))

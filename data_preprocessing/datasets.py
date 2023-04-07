@@ -8,6 +8,7 @@ from torchvision.datasets import MNIST, CIFAR10
 import os
 import torch
 import pandas as pd
+from torchvision.transforms import ToTensor
 
 logging.basicConfig()
 logger = logging.getLogger()
@@ -134,16 +135,15 @@ def load_data():
       for client in os.listdir(directory):
           curr_path = f'{directory}/{client}/pcap'
 
-          for j, subdir in enumerate(os.listdir(curr_path)):
-              if j == 3:
-                break
+          for subdir in os.listdir(curr_path):
+              
               curr_path = f'{directory}/{client}/pcap/{subdir}/dataset'
               curr_type = subdir[-1:]
               if curr_type == str(1):
                   for dayscen in os.listdir(curr_path):
                       curr_path = f'{directory}/{client}/pcap/{subdir}/dataset/{dayscen}'
                       for i, img in enumerate(os.listdir(curr_path)):
-                          if i == 1:
+                          if i == 5:
                             break
                           if dayscen == 'benign':
                               label = 0
@@ -177,7 +177,7 @@ def load_data():
 
       return img_df
 
-    
+"""    
 def _parse_function(filename, label):
         with open(filename, 'rb') as f:
             image = Image.open(f)
@@ -185,6 +185,11 @@ def _parse_function(filename, label):
             image = torch.tensor(np.array(image), dtype=torch.float32)
             image = image.unsqueeze(0)  # add channel dimension as the first dimension
         return image, label
+"""
+def _parse_function(filename, label):
+    image = Image.open(filename).convert('L')
+    image = ToTensor()(image)
+    return image, label
 
 
 class SIDD(data.Dataset):
@@ -213,39 +218,24 @@ class SIDD(data.Dataset):
         return self.ds_length
 
 class SIDD_truncated(data.Dataset):
-    #def __init__(self, root, dataidxs=None):
     def __init__(self, dataidxs=None):
-        #self.client_id = client_id
-        #self.root = root
+        super().__init__()
+
         self.dataidxs = dataidxs
-        #self.train = train
-        #self.transform = transform
-        #self.target_transform = target_transform
-        #self.download = download
-        self.data, self.target = self.__build_truncated_dataset__()
-
-    def __build_truncated_dataset__(self):
-
-        sidd = SIDD()
-
-        data = sidd.file_paths
-        target = sidd.file_labels
+        self.sidd = SIDD()
         
         if self.dataidxs is not None:
-            logging.info("*******dataidxs: %s ************", self.dataidxs)
-            data = data[self.dataidxs]
-            target = target[self.dataidxs]
-
-        return data, target
+            self.data = [self.sidd.file_paths[i] for i in self.dataidxs]
+            self.target = [self.sidd.file_labels[i] for i in self.dataidxs]
+        else:
+            self.data = self.sidd.file_paths
+            self.target = self.sidd.file_labels
 
     def __getitem__(self, idx):
-        logging.info("#########   Data: %s ##### Index: %s", self.data, idx)
-        logging.info("dataaaaa:  %s", self.data[idx])
         filename = self.data[idx]
         label = self.target[idx]
         image, label = _parse_function(filename, label)
         return image, label
-
 
     def __len__(self):
         return len(self.data)

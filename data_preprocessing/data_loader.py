@@ -37,9 +37,9 @@ def load_mnist_data(datadir):
 
     return (X_train, y_train, X_test, y_test)
 
-def load_SIDD_data(client_id):
-    client_id = client_id
-    sidd_ds = SIDD(client_id)
+def load_SIDD_data():
+    #client_id = client_id
+    sidd_ds = SIDD()
 
     train_size = int(0.8 * len(sidd_ds))
     test_size = len(sidd_ds) - train_size
@@ -150,7 +150,7 @@ def record_net_data_stats(y_train, net_dataidx_map, logdir):
     return net_cls_counts
 
 
-def partition_data(dataset, datadir, logdir, partition, n_nets, alpha, client_id, args):
+def partition_data(dataset, datadir, logdir, partition, n_nets, alpha, args):
     if dataset == 'mnist':
         X_train, y_train, X_test, y_test = load_mnist_data(datadir)
         n_train = X_train.shape[0]
@@ -177,7 +177,7 @@ def partition_data(dataset, datadir, logdir, partition, n_nets, alpha, client_id
         y_train = trainset.get_train_labels
         n_train = y_train.shape[0]
     elif dataset == 'sidd':
-        X_train, y_train, X_test, y_test = load_SIDD_data(client_id)
+        X_train, y_train, X_test, y_test = load_SIDD_data()
         n_train = X_train.shape[0]
         yshape = y_train
 
@@ -191,7 +191,7 @@ def partition_data(dataset, datadir, logdir, partition, n_nets, alpha, client_id
     elif partition == "hetero":
         min_size = 0
         K = 2
-        X_train, y_train, X_test, y_test = load_SIDD_data(client_id)
+        X_train, y_train, X_test, y_test = load_SIDD_data()
         N = y_train.shape[0]
         net_dataidx_map = {}
 
@@ -267,7 +267,7 @@ def partition_data(dataset, datadir, logdir, partition, n_nets, alpha, client_id
     # return y_train, net_dataidx_map, traindata_cls_counts
 
 
-def get_dataloader(dataset, datadir, train_bs, test_bs, client_id, dataidxs=None):
+def get_dataloader(dataset, datadir, train_bs, test_bs, dataidxs=None):
     if dataset in ('mnist', 'cifar10'):
         if dataset == 'mnist':
             dl_obj = MNIST_truncated
@@ -307,7 +307,7 @@ def get_dataloader(dataset, datadir, train_bs, test_bs, client_id, dataidxs=None
       test_dl = data.DataLoader(dataset=test_ds, batch_size=test_bs, shuffle=False, drop_last=True)
       """
 
-      sidd_ds = SIDD(client_id)
+      sidd_ds = SIDD()
 
       train_size = int(0.8 * len(sidd_ds))
       test_size = len(sidd_ds) - train_size

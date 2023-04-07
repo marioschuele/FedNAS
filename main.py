@@ -146,7 +146,6 @@ def init_client(args, comm, rank, size, round_num, seed):
                                                                                              args.partition,
                                                                                              args.client_number,
                                                                                              args_alpha,
-                                                                                             client_ID,
                                                                                              args=args)
     logging.info("traindata_cls_counts = " + str(traindata_cls_counts))
 
@@ -160,10 +159,10 @@ def init_client(args, comm, rank, size, round_num, seed):
     train_idxs = dataidxs[0:split]
     test_idxs = dataidxs[split:local_sample_number]
 
-    train_local, _ = get_dataloader(args.dataset, args_datadir, args.batch_size, args.batch_size, client_id, train_idxs)
+    train_local, _ = get_dataloader(args.dataset, args_datadir, args.batch_size, args.batch_size, train_idxs)
     logging.info("rank = %d, batch_num_train_local = %d" % (rank, len(train_local)))
 
-    test_local, _ = get_dataloader(args.dataset, args_datadir, args.batch_size, args.batch_size, client_id, test_idxs)
+    test_local, _ = get_dataloader(args.dataset, args_datadir, args.batch_size, args.batch_size, test_idxs)
     logging.info("rank = %d, batch_num_test_local = %d" % (rank, len(test_local)))
 
     # 2. initialize the trainer

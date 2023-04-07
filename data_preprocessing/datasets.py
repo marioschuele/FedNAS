@@ -95,12 +95,12 @@ class MNIST_truncated(data.Dataset):
     def __len__(self):
         return len(self.data)
 
-def load_data(clientID):
+def load_data():
       directory = 'SIDD'
       uid = 0
       imgs = {}
       client_id = 0
-
+      """
       label_counts = {0: 0, 1: 0}
 
       for client in os.listdir(directory):
@@ -128,9 +128,46 @@ def load_data(clientID):
                               uid += 1
                               label_counts[label] += 1
           client_id += 1
-    
+    """
+      label_counts = {0: 0, 1: 0}
+
+      for client in os.listdir(directory):
+          curr_path = f'{directory}/{client}/pcap'
+
+          for subdir in os.listdir(curr_path):
+              curr_path = f'{directory}/{client}/pcap/{subdir}/dataset'
+              curr_type = subdir[-1:]
+              if curr_type == str(1):
+                  for dayscen in os.listdir(curr_path):
+                      curr_path = f'{directory}/{client}/pcap/{subdir}/dataset/{dayscen}'
+                      for i, img in enumerate(os.listdir(curr_path)):
+                          if i == 45:
+                            break
+                          if dayscen == 'benign':
+                              label = 0
+                          elif dayscen == 'malicious':
+                              label = 1
+                          imgs[uid] = {'id': uid, 'label': str(label), 'fn': img, 'path': curr_path + '/' + img}
+                          uid += 1
+                          label_counts[label] += 1
+                          
+      print(label_counts)
+      print(label_counts[1] / label_counts[0] * 100)
+
+      total = label_counts[1] + label_counts[0]
+      neg = label_counts[0]
+      pos = label_counts[1]
+
+      weight_for_0 = (1 / neg) * (total / 2.0)
+      weight_for_1 = (1 / pos) * (total / 2.0)
+
+
+      class_weight = {0: weight_for_0, 1: weight_for_1}
+
+      print('Weight for class 0: {:.2f}'.format(weight_for_0))
+      print('Weight for class 1: {:.2f}'.format(weight_for_1))
       img_df = pd.DataFrame.from_dict(imgs,orient='index')
-      img_df = img_df[img_df['client_id'] == clientID]
+      #img_df = img_df[img_df['client_id'] == clientID]
       img_df['label'] = img_df['label'].astype(int)
       #img_df['label'] = img_df['label'].replace(3,2)
       #img_df.loc[img_df.index[(img_df['label']==3)],'label'] = 2
@@ -150,8 +187,8 @@ def _parse_function(filename, label):
 
 class SIDD(data.Dataset):
     #def __init__(self, root, dataidxs=None):
-    def __init__(self, client_id, dataidxs=None):
-        self.client_id = client_id
+    def __init__(self, dataidxs=None):
+        #self.client_id = client_id
         #self.root = root
         self.dataidxs = dataidxs
         #self.train = train
@@ -159,7 +196,7 @@ class SIDD(data.Dataset):
         #self.target_transform = target_transform
         #self.download = download
 
-        img_df = load_data(client_id)
+        img_df = load_data()
         file_paths = img_df.path
         file_labels = img_df["label"]
 

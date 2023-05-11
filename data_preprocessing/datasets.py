@@ -9,6 +9,7 @@ import os
 import torch
 import pandas as pd
 from torchvision.transforms import ToTensor
+import torchvision.transforms as transforms
 
 logging.basicConfig()
 logger = logging.getLogger()
@@ -143,7 +144,7 @@ def load_data():
                   for dayscen in os.listdir(curr_path):
                       curr_path = f'{directory}/{client}/pcap/{subdir}/dataset/{dayscen}'
                       for i, img in enumerate(os.listdir(curr_path)):
-                          if i == 5:
+                          if i == 45:
                             break
                           if dayscen == 'benign':
                               label = 0
@@ -154,7 +155,6 @@ def load_data():
                           label_counts[label] += 1
                           
       print(label_counts)
-      #print(label_counts[1] / label_counts[0] * 100)
 
       total = label_counts[1] + label_counts[0]
       neg = label_counts[0]
@@ -166,10 +166,7 @@ def load_data():
 
       class_weight = {0: weight_for_0, 1: weight_for_1}
 
-      #print('Weight for class 0: {:.2f}'.format(weight_for_0))
-      #print('Weight for class 1: {:.2f}'.format(weight_for_1))
       img_df = pd.DataFrame.from_dict(imgs,orient='index')
-      #img_df = img_df[img_df['client_id'] == clientID]
       img_df['label'] = img_df['label'].astype(int)
       #img_df['label'] = img_df['label'].replace(3,2)
       #img_df.loc[img_df.index[(img_df['label']==3)],'label'] = 2
@@ -185,10 +182,17 @@ def _parse_function(filename, label):
             image = torch.tensor(np.array(image), dtype=torch.float32)
             image = image.unsqueeze(0)  # add channel dimension as the first dimension
         return image, label
-"""
+
 def _parse_function(filename, label):
     image = Image.open(filename).convert('L')
     image = ToTensor()(image)
+    return image, label
+"""
+def _parse_function(filename, label):
+    with open(filename, 'rb') as f:
+        image = transforms.functional.to_tensor(Image.open(f).convert('L'))
+    image /= 255.0
+    label = torch.tensor(label, dtype=torch.long)
     return image, label
 
 
